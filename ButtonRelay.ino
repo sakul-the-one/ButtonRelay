@@ -4,9 +4,7 @@
 * Set them here:
 */
 //Main Variables:
-const char * WiFi_Name = "Paste Wifi Name Here"; //Often also called SSID
-const char * WiFi_Password = "Paste Wifi Password here";
-const char * Computer_Password = "PC Password";
+#include "passwords.h"
 //Both in ms: (1/1000s)
 const uint16_t  Press_Time = 500; //Time the button should be pressed when the website button is pressed. 
 const uint16_t  Boot_Time = 30000; //Time it waits to boot the PC up
@@ -38,29 +36,28 @@ const char * InputFieldName PROGMEM = "pd";
 const char * textHtml PROGMEM = "text/html";
 //Website:
 const char index_html[] PROGMEM = R"rawliteral(
-<head><title>ESP32</title></head>
+<head><title>Turn PC on</title></head>
 <body>
 <h1>Turn PC on</h1>
 Enter the Password:
 <form action="/get">
-<input type="password" name="pd" id= "p">
+<input type="password" name="pd" id= "pswd">
 <input type="submit" value="Start Computer">
-<button onclick="S()">Show Password</button>
 </form>
+<button onclick="S()">Show Password</button>
 <script> 
-var P = true;
-a=document.getElementById("p"); 
+var PSWD = true;
+a=document.getElementById("pswd"); 
 function S() 
-{
-if(PSWD === true) {
-a.setAttribute("type","text");
-P = false;
-}
-else 
-{
-a.setAttribute("type","password");
-PSWD = true;
-}
+  {
+  if(PSWD === true) {
+    a.setAttribute("type","text");
+    PSWD = false;
+  }
+  else {
+    a.setAttribute("type","password");
+    PSWD = true;
+  }
 }
 </script>
 </body>
@@ -68,9 +65,11 @@ PSWD = true;
 /*void notFound(AsyncWebServerRequest *request) {
   request->send(404, "text/plain", "Not found");
 }*/
+
 //Turn pc on:
 void TurnComputerOn() 
 {
+  Serial.println("Turning PC on");
   //Start Connection:
   digitalWrite(LED_BUILTIN, HIGH);
   digitalWrite(KickstartPin, HIGH);
@@ -81,19 +80,22 @@ void TurnComputerOn()
   digitalWrite(KickstartPin, LOW);
   //Wait for it to boot
   delay(Boot_Time);
+  Serial.println("entering password");
   //Select Account:
   bleKeyboard.press(KEY_LEFT_CTRL);
   delay(100);
   bleKeyboard.releaseAll();
+  delay(100);
   //Write Password:
   bleKeyboard.print(Computer_Password);
   delay(100);
   //Press Enter:
-  bleKeyboard.press(KEY_NUM_ENTER);
+  bleKeyboard.press(KEY_RETURN);
   delay(100);
   bleKeyboard.releaseAll();
+  Serial.println("Turned PC");
 }
-//wbsite functions:
+//website functions:
 void handleGet() {
 
   if(!server.hasArg(InputFieldName)) {
@@ -105,17 +107,20 @@ void handleGet() {
 
   if(strcmp(Computer_Password, inputMessage.c_str()) == 0)
   {
-      TurnComputerOn();
-      server.send(200, textHtml, "Success");
+    server.send(200, textHtml, "Success");
+    TurnComputerOn();
   }
   else
   {
-      server.send(200, textHtml, "Wrong password");
+    server.send(200, textHtml, "Wrong password");
   }
 }
-void handleRoot() {
+
+void handleRoot() 
+{
   server.send_P(200, textHtml, index_html);
 }
+
 void setup() {
   //Start Keyboard and enter password:
   bleKeyboard.begin();
@@ -139,7 +144,7 @@ void setup() {
     Serial.println("E: WF");
     return;
   }
-  Serial.print("IP");
+  Serial.print("IP: ");
   Serial.println(WiFi.localIP());
   //Create Website:
   server.on("/", handleRoot);
