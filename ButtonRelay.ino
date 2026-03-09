@@ -81,19 +81,21 @@ void TurnComputerOn()
   //Wait for it to boot
   delay(Boot_Time);
   Serial.println("entering password");
+  digitalWrite(LED_BUILTIN, HIGH);
   //Select Account:
   bleKeyboard.press(KEY_LEFT_CTRL);
-  delay(100);
+  delay(200);
   bleKeyboard.releaseAll();
-  delay(100);
+  delay(200);
   //Write Password:
   bleKeyboard.print(Computer_Password);
-  delay(100);
+  delay(200);
   //Press Enter:
   bleKeyboard.press(KEY_RETURN);
-  delay(100);
+  delay(200);
   bleKeyboard.releaseAll();
-  Serial.println("Turned PC");
+  digitalWrite(LED_BUILTIN, LOW);
+  Serial.println("Turned PC on");
 }
 //website functions:
 void handleGet() {
