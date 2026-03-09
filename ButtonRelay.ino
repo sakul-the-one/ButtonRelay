@@ -7,7 +7,7 @@
 #include "passwords.h"
 //Both in ms: (1/1000s)
 const uint16_t  Press_Time = 500; //Time the button should be pressed when the website button is pressed. 
-const uint16_t  Boot_Time = 30000; //Time it waits to boot the PC up
+//const uint16_t  Boot_Time = 30000; //Time it waits to boot the PC up
 /*
 * Thats it!
 * Feel free to use!
@@ -79,7 +79,10 @@ void TurnComputerOn()
   digitalWrite(LED_BUILTIN, LOW);
   digitalWrite(KickstartPin, LOW);
   //Wait for it to boot
-  delay(Boot_Time);
+  //delay(Boot_Time);
+  while (!bleKeyboard.isConnected())
+    delay(1000); //If not connected, wait a second
+  delay(2000); //wait 2 seconds for good meassures
   Serial.println("entering password");
   digitalWrite(LED_BUILTIN, HIGH);
   //Select Account:
