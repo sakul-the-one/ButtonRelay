@@ -34,6 +34,7 @@ WebServer server(80);
 //Some other variables:
 const char * InputFieldName PROGMEM = "pd";
 const char * textHtml PROGMEM = "text/html";
+bool started = false;
 //Website:
 const char index_html[] PROGMEM = R"rawliteral(
 <head><title>Turn PC on</title></head>
@@ -79,10 +80,14 @@ void TurnComputerOn()
   digitalWrite(LED_BUILTIN, LOW);
   digitalWrite(KickstartPin, LOW);
   //Wait for it to boot
-  delay(Boot_Time);
-  //while (!bleKeyboard.isConnected())
-  //  delay(1000); //If not connected, wait a second
-  //delay(2000); //wait 2 seconds for good meassures
+  //delay(Boot_Time);
+  server.end();
+  WiFI.end();
+  delay(1000);
+  bleKeyboard.begin();
+  while (!bleKeyboard.isConnected())
+    delay(1000); //If not connected, wait a second
+  delay(2000); //wait 2 seconds for good meassures
   Serial.println("entering password");
   digitalWrite(LED_BUILTIN, HIGH);
   //Select Account:
@@ -99,6 +104,7 @@ void TurnComputerOn()
   bleKeyboard.releaseAll();
   digitalWrite(LED_BUILTIN, LOW);
   Serial.println("Turned PC on");
+  started = true;
 }
 //website functions:
 void handleGet() {
@@ -128,7 +134,7 @@ void handleRoot()
 
 void setup() {
   //Start Keyboard and enter password:
-  bleKeyboard.begin();
+  
   Serial.begin(115200);
   //Setting all the Pins:
 
@@ -178,4 +184,6 @@ void loop() {
     digitalWrite(LED_BUILTIN, LOW);
     digitalWrite(KickstartPin, LOW);
   }
+  if(!bleKeyboard.isConnected() && started)
+    esp_restart();
 }
