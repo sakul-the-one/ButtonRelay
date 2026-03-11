@@ -81,12 +81,15 @@ void TurnComputerOn()
   digitalWrite(KickstartPin, LOW);
   //Wait for it to boot
   //delay(Boot_Time);
-  server.end();
-  WiFI.end();
+  //server.end();
+  WiFi.disconnect();;
   delay(1000);
-  bleKeyboard.begin();
+  //bleKeyboard.begin();
   while (!bleKeyboard.isConnected())
+  {
     delay(1000); //If not connected, wait a second
+    Serial.println("Waiting for PC connection");
+  }
   delay(2000); //wait 2 seconds for good meassures
   Serial.println("entering password");
   digitalWrite(LED_BUILTIN, HIGH);
@@ -134,10 +137,9 @@ void handleRoot()
 
 void setup() {
   //Start Keyboard and enter password:
-  
+  bleKeyboard.begin();
   Serial.begin(115200);
   //Setting all the Pins:
-
   //Debug light:
   pinMode(LED_BUILTIN, OUTPUT);
   //Init both Buttons
