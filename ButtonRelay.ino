@@ -7,7 +7,7 @@
 #include "passwords.h"
 //Both in ms: (1/1000s)
 const uint16_t  Press_Time = 500; //Time the button should be pressed when the website button is pressed. 
-const uint16_t  Boot_Time = 30000; //Time it waits to boot the PC up in ms. So 30000 are 30 seconds
+//const uint16_t  Boot_Time = 30000; //Time it waits to boot the PC up in ms. So 30000 are 30 seconds
 /*
 * Thats it!
 * Feel free to use!
@@ -66,7 +66,16 @@ function S()
 /*void notFound(AsyncWebServerRequest *request) {
   request->send(404, "text/plain", "Not found");
 }*/
-
+bool CompareStrings(std:string org, String str2) 
+{
+  if (org.length != str2.length) return false;
+  for (int i = 0; i < org.length; i++) 
+  {
+    if (org[i] != str2[i])
+      return false;
+  }
+  return true;
+}
 //Turn pc on:
 void TurnComputerOn() 
 {
@@ -119,7 +128,7 @@ void handleGet() {
 
   String inputMessage = server.arg(InputFieldName);
 
-  if(strcmp(Computer_Password, inputMessage.c_str()) == 0)
+  if(CompareStrings(Computer_Password, inputMessage) == true)
   {
     server.send(200, textHtml, "Success");
     TurnComputerOn();
