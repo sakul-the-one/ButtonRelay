@@ -38,15 +38,60 @@ const char * textHtml PROGMEM = "text/html";
 bool started = false;
 //Website:
 const char index_html[] PROGMEM = R"rawliteral(
-<head><title>Turn PC on</title></head>
+<!DOCTYPE html>
+<html>
+<head>
+<title>Boot System</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+body{
+  margin:0;
+  background:#000;
+  color:#00ff9c;
+  font-family:monospace;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  height:100vh;
+}
+.box{width:260px}
+h1{font-size:20px;margin-bottom:10px}
+input{
+  width:100%;
+  background:#000;
+  color:#00ff9c;
+  border:1px solid #00ff9c;
+  padding:6px;
+  margin:6px 0;
+  font-family:monospace;
+  width:100%;
+  max-width:247px; /* or whatever width you want. */
+}
+button,input[type=submit]{
+  background:#000;
+  color:#00ff9c;
+  border:1px solid #00ff9c;
+  padding:6px;
+  cursor:pointer;
+  width:100%;
+  max-width:320px; /* or whatever width you want. */
+}
+button:hover,input[type=submit]:hover{
+  background:#00ff9c;
+  color:#000;
+}
+</style>
+</head>
 <body>
-<h1>Turn PC on</h1>
-Enter the Password:
+<div class="box">
+<h1>> SYSTEM BOOT</h1>
 <form action="/get">
-<input type="password" name="pd" id= "pswd">
-<input type="submit" value="Start Computer">
+<input type="password" name="pd" id="pswd" placeholder="PASSWORD">
+<input type="submit" value="START COMPUTER">
 </form>
-<button onclick="S()">Show Password</button>
+<button onclick="S()">SHOW PASSWORD</button>
+</div>
+
 <script> 
 var PSWD = true;
 a=document.getElementById("pswd"); 
@@ -63,6 +108,8 @@ function S()
 }
 </script>
 </body>
+</html>
+
 )rawliteral";
 /*void notFound(AsyncWebServerRequest *request) {
   request->send(404, "text/plain", "Not found");
