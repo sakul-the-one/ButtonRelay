@@ -23,6 +23,7 @@ uint8_t BatteryPercentage = 69; //Often Capout at 100. You may try more though.
 BleKeyboard bleKeyboard(KeyBoardName, KeyBoardProducerName, BatteryPercentage);
 #include <WiFi.h>
 #include <WebServer.h>
+#include <string>
 WebServer server(80);
 
 //Pins:
@@ -66,10 +67,17 @@ function S()
 /*void notFound(AsyncWebServerRequest *request) {
   request->send(404, "text/plain", "Not found");
 }*/
-bool CompareStrings(std:string org, String str2) 
+int getStringLenght(char * str) 
 {
-  if (org.length != str2.length) return false;
-  for (int i = 0; i < org.length; i++) 
+  int r = 0;
+  for (; str[r] != '\0'; r++);
+  return r;
+}
+bool CompareStrings(char * org, String str2) 
+{
+  int orgLen = getStringLenght(org); 
+  if (orgLen != str2.length()) return false;
+  for (int i = 0; i < orgLen; i++) 
   {
     if (org[i] != str2[i])
       return false;
@@ -128,14 +136,15 @@ void handleGet() {
 
   String inputMessage = server.arg(InputFieldName);
 
-  if(CompareStrings(Computer_Password, inputMessage) == true)
+  if(CompareStrings((char *)Computer_Password, inputMessage) == true)
   {
     server.send(200, textHtml, "Success");
     TurnComputerOn();
   }
   else
   {
-    server.send(200, textHtml, "Wrong password");
+    server.send(200, textHtml, "Wrong password. wait 5 seconds");
+    delay(5000);
   }
 }
 
