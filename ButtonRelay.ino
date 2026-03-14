@@ -36,6 +36,8 @@ WebServer server(80);
 const char * InputFieldName PROGMEM = "pd";
 const char * textHtml PROGMEM = "text/html";
 bool started = false;
+uint16_t MainKey = 0;
+char * EncodedPSW;
 //Website:
 const char index_html[] PROGMEM = R"rawliteral(
 <!DOCTYPE html>
@@ -87,13 +89,20 @@ button:hover,input[type=submit]:hover{
 <h1>> SYSTEM BOOT</h1>
 <form action="/get">
 <input type="password" name="pd" id="pswd" placeholder="PASSWORD">
-<input type="submit" value="START COMPUTER">
 </form>
+<button onclick="SendPSW()">START COMPUTER</button>
 <button onclick="S()">SHOW PASSWORD</button>
 </div>
 
 <script> 
 var PSWD = true;
+let KEY = 0;
+
+window.onload = function(){
+  fetch("/key")
+  .then(r => r.text())
+  .then(k => KEY = parseInt(k));
+}
 a=document.getElementById("pswd"); 
 function S() 
   {
@@ -106,14 +115,50 @@ function S()
     PSWD = true;
   }
 }
+function SendPSW() 
+{
+	if(a.value.length === 0)
+    {
+    	alert("No Password entered!");
+        return;
+    }
+	let Cripto = Encode(a.value, KEY);
+     window.location = "/get?pd=" + encodeURIComponent(Cripto);
+}
+function Encode(str, key)
+{
+    let length = str.length;
+    let ret = [];
+    for(let i = 0; i < length; i++)
+    {
+        let xor_key = ((key >> (8 * (i % 2))) * i) & 255;
+        ret += String.fromCharCode(str.charCodeAt(i) ^ xor_key);
+    }
+    ret += String.fromCharCode(length);
+    return ret;
+}
 </script>
 </body>
 </html>
 
 )rawliteral";
+// //console.log("org: " + a.value + " enc: " + btoa(Cripto) + " dbg: " + Cripto + ";");
 /*void notFound(AsyncWebServerRequest *request) {
   request->send(404, "text/plain", "Not found");
 }*/
+char* encode(const char* str, uint16_t key) 
+{
+    int lenght = getStringLenght((char *)str);
+    char * ret = (char*)malloc(lenght + 1);
+    for (uint8_t i = 0; i < lenght; i++) 
+    {
+        uint8_t xor_key = (key >> (8 * (i % 2))) * i;
+        ret[i] = str[i] ^ xor_key;
+    }
+    ret[lenght] = (char)lenght;
+    ret[lenght+1] = '\0';
+    return ret;
+}
 int getStringLenght(char * str) 
 {
   int r = 0;
@@ -183,7 +228,7 @@ void handleGet() {
 
   String inputMessage = server.arg(InputFieldName);
 
-  if(CompareStrings((char *)Computer_Password, inputMessage) == true)
+  if(CompareStrings(EncodedPSW, inputMessage) == true)
   {
     server.send(200, textHtml, "Success");
     TurnComputerOn();
@@ -195,11 +240,18 @@ void handleGet() {
   }
 }
 
+void handleKey() {
+  free(EncodedPSW);
+  EncodedPSW = encode(Computer_Password, MainKey);
+  Serial.printf("Key: %i; EncodedPSW: %s", MainKey, EncodedPSW);
+  server.send(200, textHtml, String(MainKey));
+}
+
 void handleRoot() 
 {
   server.send_P(200, textHtml, index_html);
 }
-
+//Main:
 void setup() {
   //Start Keyboard and enter password:
   bleKeyboard.begin();
@@ -227,6 +279,7 @@ void setup() {
   //Create Website:
   server.on("/", handleRoot);
   server.on("/get", handleGet);
+  server.on("/key", handleKey);
   server.onNotFound([](){
     server.send(404, "text/plain", "Not found");
   });
@@ -235,9 +288,13 @@ void setup() {
   digitalWrite(LED_BUILTIN, HIGH);
   delay(500);
   digitalWrite(LED_BUILTIN, LOW);
+  //Not needed, just there to pre malloc
+  EncodedPSW = encode(Computer_Password, MainKey);
+  MainKey += 0xA0B2;
 }
-
+//Main Loop:
 void loop() {
+  MainKey++;
   server.handleClient();
   int test = 0;
   test = digitalRead(InputPin);
