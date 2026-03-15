@@ -87,23 +87,27 @@ button:hover,input[type=submit]:hover{
 <body>
 <div class="box">
 <h1>> SYSTEM BOOT</h1>
-<form action="/get">
 <input type="password" name="pd" id="pswd" placeholder="PASSWORD">
-</form>
 <button onclick="SendPSW()">START COMPUTER</button>
 <button onclick="S()">SHOW PASSWORD</button>
 </div>
 
 <script> 
 var PSWD = true;
-let KEY = 0;
+let KEY = null;
 
 window.onload = function(){
   fetch("/key")
   .then(r => r.text())
-  .then(k => KEY = parseInt(k));
+  .then(k => {
+      KEY = parseInt(k);
+      console.log("Key:", KEY);
+  });
 }
-a=document.getElementById("pswd"); 
+a=document.getElementById("pswd");
+a.addEventListener("keypress",function(e){
+  if(e.key==="Enter") SendPSW();
+});
 function S() 
   {
   if(PSWD === true) {
@@ -117,18 +121,24 @@ function S()
 }
 function SendPSW() 
 {
+  if(KEY === null){
+        alert("No Criptic key received yet");
+        return;
+    }
 	if(a.value.length === 0)
     {
     	alert("No Password entered!");
         return;
     }
 	let Cripto = Encode(a.value, KEY);
-     window.location = "/get?pd=" + encodeURIComponent(Cripto);
+  let send = encodeURIComponent(btoa(Cripto)); //encodeURIComponent(
+  alert("org: " + a.value + " key: " + KEY + " enc: " + send + " dbg: " + Cripto + "; lenght: " + send.length);
+  window.location = "/get?pd=" + send;
 }
 function Encode(str, key)
 {
     let length = str.length;
-    let ret = [];
+    let ret = "";
     for(let i = 0; i < length; i++)
     {
         let xor_key = ((key >> (8 * (i % 2))) * i) & 255;
@@ -146,10 +156,51 @@ function Encode(str, key)
 /*void notFound(AsyncWebServerRequest *request) {
   request->send(404, "text/plain", "Not found");
 }*/
+//Base64:
+static char encoding_table[] = {'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H',
+                                'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P',
+                                'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X',
+                                'Y', 'Z', 'a', 'b', 'c', 'd', 'e', 'f',
+                                'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n',
+                                'o', 'p', 'q', 'r', 's', 't', 'u', 'v',
+                                'w', 'x', 'y', 'z', '0', '1', '2', '3',
+                                '4', '5', '6', '7', '8', '9', '+', '/'};
+static char *decoding_table = NULL;
+static int mod_table[] = {0, 2, 1};
+              
+char * base64_encode(const char * data, size_t input_length, size_t *output_length) 
+{
+    *output_length = (4 * ((input_length + 2) / 3));
+
+    char *encoded_data = (char *) malloc((*output_length)); //+1 for Null character
+    memset(encoded_data, '\0', *output_length);
+    if (encoded_data == NULL) return NULL;
+
+    for (int i = 0, j = 0; i < input_length;) {
+
+        uint32_t octet_a = i < input_length ? (unsigned char)data[i++] : 0;
+        uint32_t octet_b = i < input_length ? (unsigned char)data[i++] : 0;
+        uint32_t octet_c = i < input_length ? (unsigned char)data[i++] : 0;
+
+        uint32_t triple = (octet_a << 0x10) + (octet_b << 0x08) + octet_c;
+
+        encoded_data[j++] = encoding_table[(triple >> 3 * 6) & 0x3F];
+        encoded_data[j++] = encoding_table[(triple >> 2 * 6) & 0x3F];
+        encoded_data[j++] = encoding_table[(triple >> 1 * 6) & 0x3F];
+        encoded_data[j++] = encoding_table[(triple >> 0 * 6) & 0x3F];
+    }
+
+    for (int i = 0; i < mod_table[input_length % 3]; i++)
+        encoded_data[*output_length - 1 - i] = '=';
+    //encoded_data[*output_length] = '\0';
+    Serial.printf("Lenght: %i ", *output_length);
+    return encoded_data;
+}
+//Custom Hashing (?) Algorythm
 char* encode(const char* str, uint16_t key) 
 {
     int lenght = getStringLenght((char *)str);
-    char * ret = (char*)malloc(lenght + 1);
+    char * ret = (char *)malloc(lenght + 1);
     for (uint8_t i = 0; i < lenght; i++) 
     {
         uint8_t xor_key = (key >> (8 * (i % 2))) * i;
@@ -159,7 +210,7 @@ char* encode(const char* str, uint16_t key)
     ret[lenght+1] = '\0';
     return ret;
 }
-int getStringLenght(char * str) 
+int getStringLenght(const char * str) 
 {
   int r = 0;
   for (; str[r] != '\0'; r++);
@@ -194,6 +245,7 @@ void TurnComputerOn()
   WiFi.disconnect();;
   delay(1000);
   //bleKeyboard.begin();
+  //delay(500);
   while (!bleKeyboard.isConnected())
   {
     delay(1000); //If not connected, wait a second
@@ -218,6 +270,7 @@ void TurnComputerOn()
   Serial.println("Turned PC on");
   started = true;
 }
+#pragma region ServerFunctions
 //website functions:
 void handleGet() {
 
@@ -230,32 +283,49 @@ void handleGet() {
 
   if(CompareStrings(EncodedPSW, inputMessage) == true)
   {
-    server.send(200, textHtml, "Success");
+    server.send(200, textHtml, "Success <br><a href='/'>Home</a> <script> setTimeout(() => { window.location = '/'}, 4500); </script>");
     TurnComputerOn();
   }
   else
   {
-    server.send(200, textHtml, "Wrong password. wait 5 seconds");
+    server.send(200, textHtml, "Wrong password. wait 5 seconds<br><a href='/'>Home</a> <script> setTimeout(() => { window.location = '/'}, 4500); </script>");
     delay(5000);
   }
+  Serial.printf("Received: %s; Expected: %s\n", inputMessage, EncodedPSW);
 }
 
 void handleKey() {
+  //what I tried first:
+  /*free(EncodedPSW);
+  uint16_t key = MainKey;
+  size_t temp = 0;
+  char * tmpStr = encode(Computer_Password, key, password_length);
+  EncodedPSW = base64_encode((const unsigned char * )tmpStr, password_length + 1, &temp);
+  Serial.printf("Key: %i; EncodedPSW: %s\n", key, EncodedPSW);
+  server.send(200, "text/plain", String(key));
+  free(tmpStr);*/
+  //what worked in https://godbolt.org/ Idk why the other one isnt working
   free(EncodedPSW);
-  EncodedPSW = encode(Computer_Password, MainKey);
-  Serial.printf("Key: %i; EncodedPSW: %s", MainKey, EncodedPSW);
-  server.send(200, textHtml, String(MainKey));
+  char * out;
+  uint16_t key = MainKey;
+  size_t outLenght = 0;
+  server.send(200, "text/plain", String(key));
+  out = encode(Computer_Password, key);
+  //printf("In: %s; Out: %s\n", Computer_Password, out);
+  EncodedPSW = base64_encode(out, getStringLenght(Computer_Password) + 1, &outLenght);
+  free(out);
+  //printf("in base64: %s; lenght in: %i", out_2, outLenght);
 }
-
+#pragma endregion ServerFunctions
 void handleRoot() 
 {
   server.send_P(200, textHtml, index_html);
 }
 //Main:
 void setup() {
-  //Start Keyboard and enter password:
-  bleKeyboard.begin();
   Serial.begin(115200);
+  Serial.print("Hi \n\n");
+  bleKeyboard.begin();
   //Setting all the Pins:
   //Debug light:
   pinMode(LED_BUILTIN, OUTPUT);
