@@ -132,7 +132,7 @@ function SendPSW()
     }
 	let Cripto = Encode(a.value, KEY);
   let send = encodeURIComponent(btoa(Cripto)); //encodeURIComponent(
-  alert("org: " + a.value + " key: " + KEY + " enc: " + send + " dbg: " + Cripto + "; lenght: " + send.length);
+  //alert("org: " + a.value + " key: " + KEY + " enc: " + send + " dbg: " + Cripto + "; lenght: " + send.length);
   window.location = "/get?pd=" + send;
 }
 function Encode(str, key)
@@ -172,8 +172,8 @@ char * base64_encode(const char * data, size_t input_length, size_t *output_leng
 {
     *output_length = (4 * ((input_length + 2) / 3));
 
-    char *encoded_data = (char *) malloc((*output_length)); //+1 for Null character
-    memset(encoded_data, '\0', *output_length);
+    char *encoded_data = (char *) malloc((*output_length) + 2); //+1 for Null character
+    memset(encoded_data, '\0', *output_length + 1);
     if (encoded_data == NULL) return NULL;
 
     for (int i = 0, j = 0; i < input_length;) {
@@ -207,7 +207,7 @@ char* encode(const char* str, uint16_t key)
         ret[i] = str[i] ^ xor_key;
     }
     ret[lenght] = (char)lenght;
-    ret[lenght+1] = '\0';
+    //ret[lenght+1] = '\0';
     return ret;
 }
 int getStringLenght(const char * str) 
@@ -306,7 +306,7 @@ void handleKey() {
   free(tmpStr);*/
   //what worked in https://godbolt.org/ Idk why the other one isnt working
   free(EncodedPSW);
-  char * out;
+  char * out = NULL;
   uint16_t key = MainKey;
   size_t outLenght = 0;
   server.send(200, "text/plain", String(key));
@@ -316,11 +316,12 @@ void handleKey() {
   free(out);
   //printf("in base64: %s; lenght in: %i", out_2, outLenght);
 }
-#pragma endregion ServerFunctions
+
 void handleRoot() 
 {
   server.send_P(200, textHtml, index_html);
 }
+#pragma endregion ServerFunctions
 //Main:
 void setup() {
   Serial.begin(115200);
