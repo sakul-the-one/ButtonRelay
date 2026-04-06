@@ -4,10 +4,12 @@
 * Set them here:
 */
 //Main Variables:
-#include "passwords.h"
+//const char * WiFi_Name = "";
+//const char * WiFi_Password = "";
+//const char * Computer_Password = "";
+#include "password.h"
 //Both in ms: (1/1000s)
 const uint16_t  Press_Time = 500; //Time the button should be pressed when the website button is pressed. 
-//const uint16_t  Boot_Time = 30000; //Time it waits to boot the PC up in ms. So 30000 are 30 seconds
 /*
 * Thats it!
 * Feel free to use!
@@ -45,6 +47,11 @@ const char index_html[] PROGMEM = R"rawliteral(
 <head>
 <title>Boot System</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
+   <style>
+        * {margin: 0; padding: 0;}
+        body {background: black;}
+canvas {display: block;}
+    </style>
 <style>
 body{
   margin:0;
@@ -56,7 +63,17 @@ body{
   align-items:center;
   height:100vh;
 }
-.box{width:260px}
+canvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 0;
+}
+.box{
+width:260px;
+position: relative;
+ z-index: 1;
+}
 h1{font-size:20px;margin-bottom:10px}
 input{
   width:100%;
@@ -85,13 +102,14 @@ button:hover,input[type=submit]:hover{
 </style>
 </head>
 <body>
+<canvas id="c"></canvas>
 <div class="box">
 <h1>> SYSTEM BOOT</h1>
 <input type="password" name="pd" id="pswd" placeholder="PASSWORD">
 <button onclick="SendPSW()">START COMPUTER</button>
 <button onclick="S()">SHOW PASSWORD</button>
 </div>
-
+</body>
 <script> 
 var PSWD = true;
 let KEY = null;
@@ -147,8 +165,58 @@ function Encode(str, key)
     ret += String.fromCharCode(length);
     return ret;
 }
+//NAVAS:
+var c = document.getElementById("c");
+var ctx = c.getContext("2d");
+
+//making the canvas full screen
+c.height = window.innerHeight;
+c.width = window.innerWidth;
+
+//english characters
+var english = "1001010101110101010101010010101000101011101111010101010110101010101010101110000101";
+//converting the string into an array of single characters
+english = english.split("");
+
+var font_size = 15;
+var columns = c.width/font_size; //number of columns for the rain
+//an array of drops - one per column
+var drops = [];
+//x below is the x coordinate
+//1 = y co-ordinate of the drop(same for every drop initially)
+for(var x = 0; x < columns; x++)
+	drops[x] = 1; 
+
+//drawing the characters
+function draw()
+{
+	//Black BG for the canvas
+	//translucent BG to show trail
+	ctx.fillStyle = "rgba(0, 0, 0, 0.05)";
+	ctx.fillRect(0, 0, c.width, c.height);
+	
+	ctx.fillStyle = "#0F0"; //green text
+	ctx.font = font_size + "px arial";
+	//looping over drops
+	for(var i = 0; i < drops.length; i++)
+	{
+		//a random chinese character to print
+		var text = english[Math.floor(Math.random()*english.length)];
+		//x = i*font_size, y = value of drops[i]*font_size
+		ctx.fillText(text, i*font_size, drops[i]*font_size);
+		
+		//sending the drop back to the top randomly after it has crossed the screen
+		//adding a randomness to the reset to make the drops scattered on the Y axis
+		if(drops[i]*font_size > c.height && Math.random() > 0.975)
+			drops[i] = 0;
+		
+		//incrementing Y coordinate
+		drops[i]++;
+	}
+}
+
+setInterval(draw, 33);
 </script>
-</body>
 </html>
 
 )rawliteral";
@@ -167,7 +235,7 @@ static char encoding_table[] = {'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H',
                                 '4', '5', '6', '7', '8', '9', '+', '/'};
 static char *decoding_table = NULL;
 static int mod_table[] = {0, 2, 1};
-              
+//Convert string to base64
 char * base64_encode(const char * data, size_t input_length, size_t *output_length) 
 {
     *output_length = (4 * ((input_length + 2) / 3));
@@ -272,6 +340,8 @@ void TurnComputerOn()
 }
 #pragma region ServerFunctions
 //website functions:
+
+//Handle Server Start Request
 void handleGet() {
 
   if(!server.hasArg(InputFieldName)) {
@@ -293,7 +363,7 @@ void handleGet() {
   }
   Serial.printf("Received: %s; Expected: %s\n", inputMessage, EncodedPSW);
 }
-
+//Handle Website Key Request
 void handleKey() {
   //what I tried first:
   /*free(EncodedPSW);
@@ -316,7 +386,7 @@ void handleKey() {
   free(out);
   //printf("in base64: %s; lenght in: %i", out_2, outLenght);
 }
-
+//Handle website Init
 void handleRoot() 
 {
   server.send_P(200, textHtml, index_html);
@@ -324,6 +394,7 @@ void handleRoot()
 #pragma endregion ServerFunctions
 //Main:
 void setup() {
+  //Start Communication with PC
   Serial.begin(115200);
   Serial.print("Hi \n\n");
   bleKeyboard.begin();
@@ -341,13 +412,14 @@ void setup() {
   //Connect to Wlan:
   WiFi.mode(WIFI_STA);
   WiFi.begin(WiFi_Name, WiFi_Password);
-  if (WiFi.waitForConnectResult() != WL_CONNECTED) {
+  if (WiFi.waitForConnectResult() != WL_CONNECTED) //Check for Error
+  {
     Serial.println("E: WF");
     return;
   }
   Serial.print("IP: ");
   Serial.println(WiFi.localIP());
-  //Create Website:
+  //Create Website&Handles:
   server.on("/", handleRoot);
   server.on("/get", handleGet);
   server.on("/key", handleKey);
@@ -366,9 +438,10 @@ void setup() {
 //Main Loop:
 void loop() {
   MainKey++;
-  server.handleClient();
-  int test = 0;
-  test = digitalRead(InputPin);
+  if(!started) //Check if Started, cause when it has started, there is no server/WLan anymore
+    server.handleClient(); //So server doesnt crash
+  int test = 0; //Button Pin Statement
+  test = digitalRead(InputPin); //Get if the Button is turned on
   if(test)
   {
     digitalWrite(LED_BUILTIN, HIGH);
@@ -379,6 +452,6 @@ void loop() {
     digitalWrite(LED_BUILTIN, LOW);
     digitalWrite(KickstartPin, LOW);
   }
-  if(!bleKeyboard.isConnected() && started)
+  if(!bleKeyboard.isConnected() && started) //When PC turns off (disconnects from the chip) and PC started, restart board, so it can be started again
     esp_restart();
 }
