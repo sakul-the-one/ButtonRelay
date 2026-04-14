@@ -323,14 +323,14 @@ void TurnComputerOn()
     delay(1000); //If not connected, wait a second
     Serial.println("Waiting for PC connection");
   }
-  delay(2000); //wait 2 seconds for good meassures
+  delay(4000); //wait 2 seconds for good meassures
   Serial.println("entering password");
   digitalWrite(LED_BUILTIN, HIGH);
   //Select Account:
   bleKeyboard.press(KEY_LEFT_CTRL);
   delay(200);
   bleKeyboard.releaseAll();
-  delay(300);
+  delay(2000);
   //Write Password:
   bleKeyboard.print(Computer_Password);
   delay(200);
