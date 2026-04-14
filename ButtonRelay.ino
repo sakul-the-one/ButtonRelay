@@ -7,7 +7,7 @@
 //const char * WiFi_Name = "";
 //const char * WiFi_Password = "";
 //const char * Computer_Password = "";
-#include "password.h"
+#include "passwords.h"
 //Both in ms: (1/1000s)
 const uint16_t  Press_Time = 500; //Time the button should be pressed when the website button is pressed. 
 /*
@@ -18,6 +18,7 @@ const uint16_t  Press_Time = 500; //Time the button should be pressed when the w
 const char * KeyBoardName = "Password"; //Max. 15 chars!
 const char * KeyBoardProducerName = "Sakul"; //Max. 15 Cahrs!
 uint8_t BatteryPercentage = 69; //Often Capout at 100. You may try more though.
+const int ButtonOffset = 125; //In ms. This helps to stop the constant clicking of the Relay
 
 //Libaries:
 #define USE_NIMBLE
@@ -40,6 +41,8 @@ const char * textHtml PROGMEM = "text/html";
 bool started = false;
 uint16_t MainKey = 0;
 char * EncodedPSW;
+bool TurnOn = false;
+int Timer = 0;
 //Website:
 const char index_html[] PROGMEM = R"rawliteral(
 <!DOCTYPE html>
@@ -312,7 +315,8 @@ void TurnComputerOn()
   //server.end();
   WiFi.disconnect();;
   delay(1000);
-  //bleKeyboard.begin();
+  bleKeyboard.begin(); //turning it back on, since we need it
+  bleKeyboard.setDelay(100);
   //delay(500);
   while (!bleKeyboard.isConnected())
   {
@@ -326,7 +330,7 @@ void TurnComputerOn()
   bleKeyboard.press(KEY_LEFT_CTRL);
   delay(200);
   bleKeyboard.releaseAll();
-  delay(200);
+  delay(300);
   //Write Password:
   bleKeyboard.print(Computer_Password);
   delay(200);
@@ -397,7 +401,7 @@ void setup() {
   //Start Communication with PC
   Serial.begin(115200);
   Serial.print("Hi \n\n");
-  bleKeyboard.begin();
+  bleKeyboard.begin(); //Turn it on before Wifi, since otherwise it wouldnt work
   //Setting all the Pins:
   //Debug light:
   pinMode(LED_BUILTIN, OUTPUT);
@@ -434,6 +438,7 @@ void setup() {
   //Not needed, just there to pre malloc
   EncodedPSW = encode(Computer_Password, MainKey);
   MainKey += 0xA0B2;
+  bleKeyboard.end();//Turn it off, since we dont need it yet
 }
 //Main Loop:
 void loop() {
@@ -442,7 +447,16 @@ void loop() {
     server.handleClient(); //So server doesnt crash
   int test = 0; //Button Pin Statement
   test = digitalRead(InputPin); //Get if the Button is turned on
-  if(test)
+  //Manage offset timer:
+  if (test && !TurnOn)
+    Timer++;
+  else if (!test && TurnOn)
+    Timer--;
+  //If Timer meets condition, change status
+  if (Timer >= ButtonOffset) TurnOn = true;
+  else if (Timer <= 0) TurnOn = false;
+
+  if(TurnOn)
   {
     digitalWrite(LED_BUILTIN, HIGH);
     digitalWrite(KickstartPin, HIGH);
