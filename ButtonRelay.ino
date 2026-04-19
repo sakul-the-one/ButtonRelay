@@ -451,7 +451,7 @@ void loop() {
   if (test && !TurnOn)
     Timer++;
   else if (!test && TurnOn)
-    Timer--;
+    Timer-=2;
   //If Timer meets condition, change status
   if (Timer >= ButtonOffset) TurnOn = true;
   else if (Timer <= 0) TurnOn = false;
