@@ -333,7 +333,7 @@ void TurnComputerOn()
   delay(2000);
   //Write Password:
   bleKeyboard.print(Computer_Password);
-  delay(200);
+  delay(500);
   //Press Enter:
   bleKeyboard.press(KEY_RETURN);
   delay(200);
