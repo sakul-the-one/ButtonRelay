@@ -4,9 +4,6 @@
 * Set them here:
 */
 //Main Variables:
-//const char * WiFi_Name = "";
-//const char * WiFi_Password = "";
-//const char * Computer_Password = "";
 #include "passwords.h"
 //Both in ms: (1/1000s)
 const uint16_t  Press_Time = 500; //Time the button should be pressed when the website button is pressed. 
@@ -43,6 +40,7 @@ uint16_t MainKey = 0;
 char * EncodedPSW;
 bool TurnOn = false;
 int Timer = 0;
+bool turning = false;
 //Website:
 const char index_html[] PROGMEM = R"rawliteral(
 <!DOCTYPE html>
@@ -301,6 +299,7 @@ bool CompareStrings(char * org, String str2)
 //Turn pc on:
 void TurnComputerOn() 
 {
+  turning = true;
   Serial.println("Turning PC on");
   //Start Connection:
   digitalWrite(LED_BUILTIN, HIGH);
@@ -341,6 +340,7 @@ void TurnComputerOn()
   digitalWrite(LED_BUILTIN, LOW);
   Serial.println("Turned PC on");
   started = true;
+  turning = false;
 }
 #pragma region ServerFunctions
 //website functions:
@@ -440,11 +440,17 @@ void setup() {
   MainKey += 0xA0B2;
   bleKeyboard.end();//Turn it off, since we dont need it yet
 }
-//Main Loop:
-void loop() {
-  MainKey++;
-  if(!started) //Check if Started, cause when it has started, there is no server/WLan anymore
-    server.handleClient(); //So server doesnt crash
+//Main Loop Server:
+void loop1() 
+{
+  if (turning) return;
+  if (turning && TurnOn) 
+  {
+    Timer = 0;
+    TurnOn = false;
+    digitalWrite(LED_BUILTIN, LOW);
+    digitalWrite(KickstartPin, LOW);
+  }
   int test = 0; //Button Pin Statement
   test = digitalRead(InputPin); //Get if the Button is turned on
   //Manage offset timer:
@@ -466,6 +472,11 @@ void loop() {
     digitalWrite(LED_BUILTIN, LOW);
     digitalWrite(KickstartPin, LOW);
   }
+}
+void loop() {
+  MainKey++;
+  if(!started) //Check if Started, cause when it has started, there is no server/WLan anymore
+    server.handleClient(); //So server doesnt crash
   if(!bleKeyboard.isConnected() && started) //When PC turns off (disconnects from the chip) and PC started, restart board, so it can be started again
     esp_restart();
 }
